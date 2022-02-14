@@ -1,0 +1,23 @@
+domain: github.io
+layout:
+- go.kubebuilder.io/v3
+projectName: operator
+repo: github.com/akakakakakaa/python-package-operator
+resources:
+- api:
+    crdVersion: v1
+  controller: true
+  domain: github.io
+  group: pythonpackage
+  kind: GlobalPythonPackageCollection
+  path: github.com/akakakakakaa/python-package-operator/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+  controller: true
+  domain: github.io
+  group: pythonpackage
+  kind: GlobalPythonPackage
+  path: github.com/akakakakakaa/python-package-operator/api/v1alpha1
+  version: v1alpha1
+version: "3"

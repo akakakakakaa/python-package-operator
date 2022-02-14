@@ -1,0 +1,57 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.8.0
+  creationTimestamp: null
+  name: globalpythonpackages.pythonpackage.github.io
+spec:
+  group: pythonpackage.github.io
+  names:
+    kind: GlobalPythonPackage
+    listKind: GlobalPythonPackageList
+    plural: globalpythonpackages
+    singular: globalpythonpackage
+  scope: Cluster
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: GlobalPythonPackage is the Schema for the globalpythonpackages
+          API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: GlobalPythonPackageSpec defines the desired state of GlobalPythonPackage
+            properties:
+              foo:
+                description: Foo is an example field of GlobalPythonPackage. Edit
+                  globalpythonpackage_types.go to remove/update
+                type: string
+            type: object
+          status:
+            description: GlobalPythonPackageStatus defines the observed state of GlobalPythonPackage
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

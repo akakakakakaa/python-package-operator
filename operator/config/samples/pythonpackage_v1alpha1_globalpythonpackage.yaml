@@ -1,0 +1,6 @@
+apiVersion: pythonpackage.github.io/v1alpha1
+kind: GlobalPythonPackage
+metadata:
+  name: globalpythonpackage-sample
+spec:
+  # TODO(user): Add fields here

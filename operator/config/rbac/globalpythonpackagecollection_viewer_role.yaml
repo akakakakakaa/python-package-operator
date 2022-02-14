@@ -1,0 +1,20 @@
+# permissions for end users to view globalpythonpackagecollections.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: globalpythonpackagecollection-viewer-role
+rules:
+- apiGroups:
+  - pythonpackage.github.io
+  resources:
+  - globalpythonpackagecollections
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - pythonpackage.github.io
+  resources:
+  - globalpythonpackagecollections/status
+  verbs:
+  - get

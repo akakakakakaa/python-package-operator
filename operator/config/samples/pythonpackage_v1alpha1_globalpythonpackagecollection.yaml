@@ -1,0 +1,12 @@
+apiVersion: pythonpackage.github.io/v1alpha1
+kind: GlobalPythonPackageCollection
+metadata:
+  name: globalpythonpackagecollection-sample
+spec:
+  persistentVolumeClaimSpec:
+    storageClassName: "standard"
+    accessModes:
+    - ReadWriteMany
+    resources:
+      requests:
+        storage: 10Gi
