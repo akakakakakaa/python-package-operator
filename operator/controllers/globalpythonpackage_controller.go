@@ -99,7 +99,7 @@ func (r *GlobalPythonPackageReconciler) Reconcile(ctx context.Context, req ctrl.
 			job, err := r.jobForGPP(gppcFound, gpp)
 			if err != nil {
 				logger.Error(err, "Failed to get job.")
-				gpp.Status.Status = ppv1alpha1.GlobalPythonPackageCollectionStatusTypeError
+				gpp.Status.Status = ppv1alpha1.GlobalPythonPackageStatusTypeError
 				gpp.Status.Reason = "Failed to get job"
 				gpp.Status.Message = err.Error()
 				return ctrl.Result{}, err
@@ -108,24 +108,24 @@ func (r *GlobalPythonPackageReconciler) Reconcile(ctx context.Context, req ctrl.
 
 			if err := r.Create(context.TODO(), job); err != nil {
 				logger.Error(err, "Failed to create job.")
-				gpp.Status.Status = ppv1alpha1.GlobalPythonPackageCollectionStatusTypeError
+				gpp.Status.Status = ppv1alpha1.GlobalPythonPackageStatusTypeError
 				gpp.Status.Reason = "Failed to create job"
 				gpp.Status.Message = err.Error()
 				return ctrl.Result{}, err
 			}
 
 			logger.Info("Create job success.")
-			gpp.Status.Status = ppv1alpha1.GlobalPythonPackageCollectionStatusTypeCreated
+			gpp.Status.Status = ppv1alpha1.GlobalPythonPackageStatusTypeDownloading
 			gpp.Status.Reason = "Create job success."
 		} else if err != nil {
 			logger.Error(err, "Failed to get job.")
-			gpp.Status.Status = ppv1alpha1.GlobalPythonPackageCollectionStatusTypeError
+			gpp.Status.Status = ppv1alpha1.GlobalPythonPackageStatusTypeError
 			gpp.Status.Reason = "Failed to create job"
 			gpp.Status.Message = err.Error()
 			return ctrl.Result{}, err
 		} else {
 			logger.Error(err, "Duplicate job name exists.")
-			gpp.Status.Status = ppv1alpha1.GlobalPythonPackageCollectionStatusTypeError
+			gpp.Status.Status = ppv1alpha1.GlobalPythonPackageStatusTypeError
 			gpp.Status.Reason = "Duplicate job name exists"
 			gpp.Status.Message = err.Error()
 			return ctrl.Result{}, err
