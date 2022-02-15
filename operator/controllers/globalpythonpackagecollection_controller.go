@@ -71,7 +71,7 @@ func (r *GlobalPythonPackageCollectionReconciler) Reconcile(ctx context.Context,
 	}()
 
 	found := &v1.PersistentVolumeClaim{}
-	err = r.Get(ctx, types.NamespacedName{Name: r.persistentVolumeClaimNameForGPPC(gppc), Namespace: util.Namespace()}, found)
+	err = r.Get(ctx, types.NamespacedName{Name: persistentVolumeClaimNameForGPPC(gppc), Namespace: util.Namespace()}, found)
 	if err != nil && errors.IsNotFound(err) {
 		logger.Info("Create persistentVolumeClaim.")
 		persistentVolumeClaim := r.persistentVolumeClaimForGPPC(gppc)
@@ -82,6 +82,7 @@ func (r *GlobalPythonPackageCollectionReconciler) Reconcile(ctx context.Context,
 			gppc.Status.Message = err.Error()
 			return ctrl.Result{}, err
 		}
+		ctrl.SetControllerReference(gppc, persistentVolumeClaim, r.Scheme)
 
 		logger.Info("Create persistentVolumeClaim success.")
 		gppc.Status.Status = ppv1alpha1.GlobalPythonPackageCollectionStatusTypeCreated
@@ -97,17 +98,16 @@ func (r *GlobalPythonPackageCollectionReconciler) Reconcile(ctx context.Context,
 func (r *GlobalPythonPackageCollectionReconciler) persistentVolumeClaimForGPPC(gppc *ppv1alpha1.GlobalPythonPackageCollection) *v1.PersistentVolumeClaim {
 	persistentVolumeClaim := &v1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      r.persistentVolumeClaimNameForGPPC(gppc),
+			Name:      persistentVolumeClaimNameForGPPC(gppc),
 			Namespace: util.Namespace(),
 		},
 		Spec: gppc.Spec.PersistentVolumeClaimSpec,
 	}
 
-	ctrl.SetControllerReference(gppc, persistentVolumeClaim, r.Scheme)
 	return persistentVolumeClaim
 }
 
-func (r *GlobalPythonPackageCollectionReconciler) persistentVolumeClaimNameForGPPC(gppc *ppv1alpha1.GlobalPythonPackageCollection) string {
+func persistentVolumeClaimNameForGPPC(gppc *ppv1alpha1.GlobalPythonPackageCollection) string {
 	return gppc.Name + "-pvc"
 }
 
