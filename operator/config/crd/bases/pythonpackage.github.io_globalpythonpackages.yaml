@@ -12,10 +12,16 @@ spec:
     kind: GlobalPythonPackage
     listKind: GlobalPythonPackageList
     plural: globalpythonpackages
+    shortNames:
+    - gpp
     singular: globalpythonpackage
   scope: Cluster
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .status.status
+      name: Status
+      type: string
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: GlobalPythonPackage is the Schema for the globalpythonpackages
@@ -36,14 +42,50 @@ spec:
           spec:
             description: GlobalPythonPackageSpec defines the desired state of GlobalPythonPackage
             properties:
-              foo:
-                description: Foo is an example field of GlobalPythonPackage. Edit
-                  globalpythonpackage_types.go to remove/update
+              globalPythonPackageCollectionName:
                 type: string
+              pythonLibrarySpec:
+                properties:
+                  name:
+                    type: string
+                  pythonSpec:
+                    properties:
+                      platform:
+                        type: string
+                      version:
+                        type: string
+                    required:
+                    - platform
+                    - version
+                    type: object
+                  version:
+                    type: string
+                required:
+                - name
+                - pythonSpec
+                type: object
+            required:
+            - globalPythonPackageCollectionName
+            - pythonLibrarySpec
             type: object
           status:
             description: GlobalPythonPackageStatus defines the observed state of GlobalPythonPackage
+            properties:
+              message:
+                description: Message shows log when the status changed in last
+                type: string
+              reason:
+                description: Reason shows why the status changed in last
+                type: string
+              status:
+                enum:
+                - Downloading
+                - Downloaded
+                - Error
+                type: string
             type: object
+        required:
+        - spec
         type: object
     served: true
     storage: true

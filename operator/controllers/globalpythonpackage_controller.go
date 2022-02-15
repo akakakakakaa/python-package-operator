@@ -18,45 +18,171 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
+	"os"
 
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	pythonpackagev1alpha1 "github.com/akakakakakaa/python-package-operator/api/v1alpha1"
+	ppv1alpha1 "github.com/akakakakakaa/python-package-operator/api/v1alpha1"
+	"github.com/akakakakakaa/python-package-operator/util"
+	"github.com/go-logr/logr"
+	batchv1 "k8s.io/api/batch/v1"
+	v1 "k8s.io/api/core/v1"
 )
 
 // GlobalPythonPackageReconciler reconciles a GlobalPythonPackage object
 type GlobalPythonPackageReconciler struct {
 	client.Client
+	Log    logr.Logger
 	Scheme *runtime.Scheme
 }
 
 //+kubebuilder:rbac:groups=pythonpackage.github.io,resources=globalpythonpackages,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=pythonpackage.github.io,resources=globalpythonpackages/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=pythonpackage.github.io,resources=globalpythonpackages/finalizers,verbs=update
+//+kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;create;update;patch;delete
 
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the GlobalPythonPackage object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.11.0/pkg/reconcile
 func (r *GlobalPythonPackageReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+	logger := r.Log.WithValues("gpp", req.NamespacedName)
 
-	// TODO(user): your logic here
+	gpp := &ppv1alpha1.GlobalPythonPackage{}
+	if err := r.Get(context.TODO(), req.NamespacedName, gpp); err != nil {
+		if errors.IsNotFound(err) {
+			logger.Info("GlobalPythonPackage resource not found. Ignoring since object must be deleted.")
+			return ctrl.Result{}, nil
+		}
+		logger.Error(err, "Failed to get GlobalPythonPackage ["+req.Name+"].")
+		return ctrl.Result{}, err
+	}
+
+	//set patch helper
+	patchHelper, err := patch.NewHelper(gpp, r.Client)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	defer func() {
+		if err := patchHelper.Patch(context.TODO(), gpp); err != nil {
+			logger.Error(err, "Failed to patch GlobalPythonPackage.")
+		}
+	}()
+
+	gppcFound := &ppv1alpha1.GlobalPythonPackageCollection{}
+	gppcName := gpp.Spec.GlobalPythonPackageCollectionName
+	if err := r.Get(context.TODO(), types.NamespacedName{Name: gppcName}, gppcFound); err != nil {
+		if errors.IsNotFound(err) {
+			logger.Error(err, "Cannot found globalPythonPackageCollection ["+gppcName+"].")
+			gpp.Status.Reason = "Cannot found globalPythonPackageCollection"
+		} else {
+			logger.Error(err, "Failed to get globalPythonPackageCollection ["+gppcName+"].")
+			gpp.Status.Reason = "Failed to get globalPythonPackageCollection"
+		}
+		gpp.Status.Status = ppv1alpha1.GlobalPythonPackageCollectionStatusTypeError
+		gpp.Status.Message = err.Error()
+		return ctrl.Result{}, err
+	} else {
+		ctrl.SetControllerReference(gppcFound, gpp, r.Scheme)
+	}
+
+	switch gpp.Status.Status {
+	case "":
+		found := &batchv1.Job{}
+		err = r.Get(context.TODO(), types.NamespacedName{Name: jobNameForGPP(gpp), Namespace: util.Namespace()}, found)
+		if err != nil && errors.IsNotFound(err) {
+			logger.Info("Create job.")
+			job, err := r.jobForGPP(gppcFound, gpp)
+			if err != nil {
+				logger.Error(err, "Failed to get job.")
+				gpp.Status.Status = ppv1alpha1.GlobalPythonPackageCollectionStatusTypeError
+				gpp.Status.Reason = "Failed to get job"
+				gpp.Status.Message = err.Error()
+				return ctrl.Result{}, err
+			}
+			ctrl.SetControllerReference(gpp, job, r.Scheme)
+
+			if err := r.Create(context.TODO(), job); err != nil {
+				logger.Error(err, "Failed to create job.")
+				gpp.Status.Status = ppv1alpha1.GlobalPythonPackageCollectionStatusTypeError
+				gpp.Status.Reason = "Failed to create job"
+				gpp.Status.Message = err.Error()
+				return ctrl.Result{}, err
+			}
+
+			logger.Info("Create job success.")
+			gpp.Status.Status = ppv1alpha1.GlobalPythonPackageCollectionStatusTypeCreated
+			gpp.Status.Reason = "Create job success."
+		} else if err != nil {
+			logger.Error(err, "Failed to get job.")
+			gpp.Status.Status = ppv1alpha1.GlobalPythonPackageCollectionStatusTypeError
+			gpp.Status.Reason = "Failed to create job"
+			gpp.Status.Message = err.Error()
+			return ctrl.Result{}, err
+		} else {
+			logger.Error(err, "Duplicate job name exists.")
+			gpp.Status.Status = ppv1alpha1.GlobalPythonPackageCollectionStatusTypeError
+			gpp.Status.Reason = "Duplicate job name exists"
+			gpp.Status.Message = err.Error()
+			return ctrl.Result{}, err
+		}
+	}
 
 	return ctrl.Result{}, nil
+}
+
+func (r *GlobalPythonPackageReconciler) jobForGPP(gppc *ppv1alpha1.GlobalPythonPackageCollection, gpp *ppv1alpha1.GlobalPythonPackage) (*batchv1.Job, error) {
+	gppSpecJson, err := json.Marshal(gpp.Spec)
+	if err != nil {
+		return nil, err
+	}
+
+	job := &batchv1.Job{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      jobNameForGPP(gpp),
+			Namespace: util.Namespace(),
+		},
+		Spec: batchv1.JobSpec{
+			Template: v1.PodTemplateSpec{
+				Spec: v1.PodSpec{
+					Containers: []v1.Container{{
+						Name:  jobContainerNameForGPP(gpp),
+						Image: os.Getenv("GLOBALPYTHONPACKAGE_JOB_NAME"),
+						Args:  []string{},
+						Env: []v1.EnvVar{{
+							Name:  "GPP_JSON_STRING",
+							Value: string(gppSpecJson),
+						}},
+						VolumeMounts: []v1.VolumeMount{{
+							MountPath: "/mnt",
+							Name:      persistentVolumeClaimNameForGPPC(gppc),
+						}},
+					}},
+					RestartPolicy: "Never",
+				},
+			},
+		},
+	}
+
+	return job, nil
+}
+
+func jobNameForGPP(gpp *ppv1alpha1.GlobalPythonPackage) string {
+	return gpp.Name + "-job"
+}
+
+func jobContainerNameForGPP(gpp *ppv1alpha1.GlobalPythonPackage) string {
+	return jobNameForGPP(gpp) + "-container"
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *GlobalPythonPackageReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&pythonpackagev1alpha1.GlobalPythonPackage{}).
+		For(&ppv1alpha1.GlobalPythonPackage{}).
+		Owns(&batchv1.Job{}).
 		Complete(r)
 }

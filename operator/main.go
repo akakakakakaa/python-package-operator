@@ -88,6 +88,7 @@ func main() {
 	}
 	if err = (&controllers.GlobalPythonPackageReconciler{
 		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("GlobalPythonPackage"),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "GlobalPythonPackage")

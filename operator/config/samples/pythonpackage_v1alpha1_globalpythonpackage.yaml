@@ -3,4 +3,10 @@ kind: GlobalPythonPackage
 metadata:
   name: globalpythonpackage-sample
 spec:
-  # TODO(user): Add fields here
+  globalPythonPackageCollectionName: globalpythonpackagecollection-sample
+  pythonLibrarySpec:
+    pythonSpec:
+      version: "3.7"
+      platform: x86_64
+    name: numpy
+    version: "1.21.2"

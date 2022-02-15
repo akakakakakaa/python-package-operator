@@ -20,31 +20,49 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	GlobalPythonPackageStatusTypeDownloading = "Downloading"
+	GlobalPythonPackageStatusTypeDownloaded  = "Downloaded"
+	GlobalPythonPackageStatusTypeError       = "Error"
+)
+
+type GlobalPythonPackagePythonSpec struct {
+	Version  string `json:"version"`
+	Platform string `json:"platform"`
+}
+
+type GlobalPythonPackagePythonLibrarySpec struct {
+	PythonSpec GlobalPythonPackagePythonSpec `json:"pythonSpec"`
+	Name       string                        `json:"name"`
+	Version    string                        `json:"version,omitempty"`
+}
+
 // GlobalPythonPackageSpec defines the desired state of GlobalPythonPackage
 type GlobalPythonPackageSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo is an example field of GlobalPythonPackage. Edit globalpythonpackage_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	GlobalPythonPackageCollectionName string                               `json:"globalPythonPackageCollectionName"`
+	PythonLibrarySpec                 GlobalPythonPackagePythonLibrarySpec `json:"pythonLibrarySpec"`
 }
 
 // GlobalPythonPackageStatus defines the observed state of GlobalPythonPackage
 type GlobalPythonPackageStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// Message shows log when the status changed in last
+	Message string `json:"message,omitempty"`
+	// Reason shows why the status changed in last
+	Reason string `json:"reason,omitempty"`
+	//+kubebuilder:validation:Enum=Downloading;Downloaded;Error;
+	Status string `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-//+kubebuilder:resource:scope=Cluster
-
+//+kubebuilder:resource:scope=Cluster,shortName=gpp
+//+kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.status`
 // GlobalPythonPackage is the Schema for the globalpythonpackages API
 type GlobalPythonPackage struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   GlobalPythonPackageSpec   `json:"spec,omitempty"`
+	Spec   GlobalPythonPackageSpec   `json:"spec"`
 	Status GlobalPythonPackageStatus `json:"status,omitempty"`
 }
 
