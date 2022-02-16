@@ -12,6 +12,9 @@ resources:
   kind: GlobalPythonPackageCollection
   path: github.com/akakakakakaa/python-package-operator/api/v1alpha1
   version: v1alpha1
+  webhooks:
+    validation: true
+    webhookVersion: v1
 - api:
     crdVersion: v1
   controller: true
@@ -20,4 +23,7 @@ resources:
   kind: GlobalPythonPackage
   path: github.com/akakakakakaa/python-package-operator/api/v1alpha1
   version: v1alpha1
+  webhooks:
+    validation: true
+    webhookVersion: v1
 version: "3"

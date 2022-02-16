@@ -94,6 +94,14 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "GlobalPythonPackage")
 		os.Exit(1)
 	}
+	if err = (&pythonpackagev1alpha1.GlobalPythonPackage{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "GlobalPythonPackage")
+		os.Exit(1)
+	}
+	if err = (&pythonpackagev1alpha1.GlobalPythonPackageCollection{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "GlobalPythonPackageCollection")
+		os.Exit(1)
+	}
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
